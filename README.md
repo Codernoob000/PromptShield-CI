@@ -43,11 +43,11 @@ flowchart TD
     J -->|"Above threshold"| K["Build Blocked<br/>Exit code 1"]
     J -->|"At or below threshold"| L["Build Passes<br/>Exit code 0"]
 
-    style D fill:#f5f5f5,stroke:#666
-    style E fill:#f5f5f5,stroke:#666
-    style F fill:#f5f5f5,stroke:#666
-    style K fill:#f5f5f5,stroke:#666
-    style L fill:#f5f5f5,stroke:#666
+    style D fill:#f5f5f5,stroke:#666,color:#222
+    style E fill:#f5f5f5,stroke:#666,color:#222
+    style F fill:#f5f5f5,stroke:#666,color:#222
+    style K fill:#fbe9e7,stroke:#c62828,color:#222
+    style L fill:#e8f5e9,stroke:#2e7d32,color:#222
 ```
 
 The pipeline runs on every code push, triggered by GitHub Actions. Modules 2 and 3 are the only stages that incur external cost (local model inference and API calls respectively); the cache filter is positioned before them specifically to avoid that cost on unchanged prompts.
@@ -169,4 +169,3 @@ Full evaluation is in progress. Metrics under evaluation include Attack Success 
 | Caching layer | Complete |
 | Pipeline orchestrator | Complete |
 | GitHub Actions integration | Not started |
-
