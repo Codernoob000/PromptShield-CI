@@ -20,18 +20,27 @@ Usage:
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
+# Ensure standard output from child Python processes is unbuffered in CI
+os.environ["PYTHONUNBUFFERED"] = "1"
+
 
 def run_step(cmd: list, step_name: str) -> int:
-    print(f"\n{'=' * 60}")
-    print(f">>> Running {step_name}")
-    print(f"{'=' * 60}\n")
+    print(f"\n{'=' * 60}", flush=True)
+    print(f">>> Running {step_name}", flush=True)
+    print(f"{'=' * 60}\n", flush=True)
+    sys.stdout.flush()
+    sys.stderr.flush()
     proc = subprocess.run(cmd)
+    sys.stdout.flush()
+    sys.stderr.flush()
     if proc.returncode != 0:
-        print(f"\n[ERROR] {step_name} exited with status {proc.returncode}")
+        print(f"\n[ERROR] {step_name} exited with status {proc.returncode}", flush=True)
+        sys.stdout.flush()
     return proc.returncode
 
 
@@ -86,10 +95,16 @@ def main():
                 with open(prompts_file, "r", encoding="utf-8") as f:
                     uncached = json.load(f)
                 if not uncached:
-                    print("\n[INFO] All prompts cached - skipping Modules 2, 3, and 4.")
+                    print("\n[INFO] All prompts cached - skipping Modules 2, 3, and 4.", flush=True)
                     prompts_need_testing = False
+                    # scores.json would otherwise be stale from a previous
+                    # run (Modules 2-4, including the Scorer, never ran
+                    # this time) - clear it so the upcoming cache merge
+                    # doesn't concatenate stale fresh_scores with the
+                    # current cache hits and produce duplicate entries.
+                    Path("reports/scores.json").write_text("[]", encoding="utf-8")
             except Exception as e:
-                print(f"[WARN] Could not inspect {prompts_file}: {e}")
+                print(f"[WARN] Could not inspect {prompts_file}: {e}", flush=True)
 
     # -------------------------------------------------------------------------
     # Steps 3, 4, 5: Modules 2, 3, 4 (Only if there are prompts to test)
@@ -101,7 +116,7 @@ def main():
             if ret != 0:
                 sys.exit(ret)
         else:
-            print("\n[INFO] Skipping Module 2 (--skip-attacker flag specified).")
+            print("\n[INFO] Skipping Module 2 (--skip-attacker flag specified).", flush=True)
 
         # Module 3: Simulation Sandbox
         ret = run_step([py, "promptshield/simulator/conversation_runner.py"], "Module 3: Simulation Sandbox")

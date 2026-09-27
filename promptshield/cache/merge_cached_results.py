@@ -69,7 +69,15 @@ def main():
     with open(CACHE_FILE, "w", encoding="utf-8") as f:
         json.dump(cache, f, indent=2, ensure_ascii=False)
 
-    combined = fresh_scores + cached_results
+    merged_by_key = {}
+    for entry in cached_results:
+        key = entry.get("prompt_hash") or entry.get("prompt_id")
+        merged_by_key[key] = entry
+    for entry in fresh_scores:
+        key = entry.get("prompt_hash") or entry.get("prompt_id")
+        merged_by_key[key] = entry  # overwrites any stale cached duplicate
+
+    combined = list(merged_by_key.values())
 
     with open(SCORES_FILE, "w", encoding="utf-8") as f:
         json.dump(combined, f, indent=2, ensure_ascii=False)
