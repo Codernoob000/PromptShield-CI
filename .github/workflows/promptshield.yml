@@ -1,0 +1,65 @@
+name: PromptShield CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  prompt-injection-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Ollama
+        run: curl -fsSL https://ollama.ai/install.sh | sh
+
+      - name: Start Ollama and pull Mistral
+        run: |
+          ollama serve &
+          sleep 5
+          ollama pull mistral
+
+      - name: Restore persistent prompt cache
+        uses: actions/cache@v4
+        with:
+          path: .promptshield_cache.json
+          # A fixed key with no hash component is intentional: this cache
+          # is meant to persist and grow across every run indefinitely,
+          # not be invalidated when a dependency file changes (unlike a
+          # typical pip/npm dependency cache).
+          key: promptshield-cache-v1
+          restore-keys: |
+            promptshield-cache-v1
+
+      - name: Run PromptShield CI
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python main.py --target-dir test_targets/ --threshold 60
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promptshield-report
+          path: reports/final_report.html
+          retention-days: 30
+
+      - name: Write GitHub Actions summary
+        if: always()
+        run: |
+          if [ -f reports/final_report.html ]; then
+            echo "PromptShield CI scan complete. See the uploaded report artifact for full detail." >> "$GITHUB_STEP_SUMMARY"
+          fi
